@@ -1,0 +1,1 @@
+@cl /O2 /c /nologo %1.cpp /Fo%1.obj /EHsc
