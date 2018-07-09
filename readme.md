@@ -14,6 +14,6 @@ Usage:
 
 The extension of the main source name is not required.
 
-Type nomake for the list of options.
+Type just nomake for the list of options.
 
 More infos on: [https://www.scriptol.com/scripts/](https://www.scriptol.com/scripts/)
