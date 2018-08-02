@@ -73,10 +73,14 @@ void IncludedItem::update(int filenum)   {
 
 
 int IncludedVector::find(const string & name) {
-   int l = (int) prjList.size();
+    int l = (int) prjList.size();
 
-   for(int i = 1; i < l; i++)  {
-     if (mystricmp(name.c_str(), prjList[i]->path.c_str()) == 0) return i;
+    for(int i = 1; i < l; i++)  {
+        if (mystricmp(name.c_str(), prjList[i]->path.c_str()) == 0) return i;
+        if(name.substr(0,2) == "./") {
+            string relname = name.substr(2);
+            if(mystricmp(relname.c_str(), prjList[i]->path.c_str()) == 0) return i;
+        }
     }
    return -1;
  }

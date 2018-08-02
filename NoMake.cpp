@@ -17,10 +17,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-#include "IncList.hpp"
-#include "NoMake.hpp"
-#include "KeyFile.hpp"
-
 #ifdef UNIX
 #include <unistd.h>
 #include <libio.h>
@@ -30,6 +26,10 @@
 #include <io.h>
 #include <sys/utime.h>
 #endif
+
+#include "IncList.hpp"
+#include "NoMake.hpp"
+#include "KeyFile.hpp"
 
 #define VERBOSE if(OPTION_VERBOSE) cout
 
@@ -46,6 +46,7 @@ int errorCounter = 0;
 bool isMainFile = true;
 
 string CPPCOMMAND = "@cl /O2 /c /nologo /EHsc ";
+string LINKER = "@link /nologo ";
 string LIB_PATH;
 string LIBS_TO_ADD = "";
 string DEFAULT_SRC = ".cpp";
@@ -59,7 +60,7 @@ int title_flag = 0;
 void title() {
    if(title_flag) return;
    title_flag = 1;
-   printf("\nNo Make V. 1.0 - Scriptol.com\n");
+   printf("\nNo Make V. 1.1 - Scriptol.com\n");
 }
 
 void usage() {
@@ -146,6 +147,15 @@ int compareTime(const string sourceName, const string objectName) {
    if(tobj == 0) return 0;
 
    return (unsigned long) t1 > (unsigned long) tobj || (unsigned long) t2 > (unsigned long) tobj;
+}
+
+
+bool setEntry() {
+  if(entryName.compare("compiler") == 0)    { CPPCOMMAND = reass(); return true;}
+  if(entryName.compare("linker") == 0)      { LINKER = reass(); return true; }
+  if(entryName.compare("extension") == 0)   { DEFAULT_OBJ = reass(); return true; }
+  if(entryName.compare("libs") == 0)        { LIBS_TO_ADD = reass(); return true; }
+  return true;
 }
 
 /*
@@ -304,7 +314,7 @@ int extractFile(const string sourceDir, int mainfile) {
     int isize;
 
     try {
-        if(OPTION_VERBOSE) cout << "Analyzing " << sourceName << endl;
+        if(OPTION_DEBUG) cout << "Analyzing " << sourceName << endl;
         current = project.add(sourceName.c_str());
         if(mainfile) project.setMain(current);
 
@@ -357,18 +367,18 @@ int extractFile(const string sourceDir, int mainfile) {
 
             ins = str.find("<");
             if(ins != -1) continue;           // include with < > are ignored
-            if(OPTION_VERBOSE) {
+            if(OPTION_DEBUG) {
                 cout << "Found header: " << str << endl;    
-            }    
+            } 
             string included = getIncluded(str, sourceDir);
-            if(OPTION_VERBOSE) cout << "included: " << included << endl;
             if(included.length() == 0) continue;
             ins = project.find(included);
             if (ins == -1) {
                 sourceName = included;
                 ins = extractFile(sourceDir, 0);
+                project.addDep(current, ins);
+                if(OPTION_VERBOSE) cout << "Found " << included << endl;
             }
-            project.addDep(current, ins);
             if(isCompiled) project.setCompiled();
 
         } // loop to read a line
@@ -381,30 +391,33 @@ int extractFile(const string sourceDir, int mainfile) {
     return current;
 }
 
+string plural(int x) {
+    if(x < 2) return "";
+    return "s";
+}
 
 // Build all files, starting with all referenced ones
 
 int buildAll() {
     int l = (int) project.size();
     int counter = 0;
-    string linking = "@link /nologo /OUT:" + changeExtension(initial, ".exe");
+    LINKER += " /OUT:" + changeExtension(initial, ".exe");
 
-    if(OPTION_VERBOSE) cout << "Build all. Project size: " << l << endl;
+    if(OPTION_VERBOSE) cout << "Building project: " << l << " file"<< plural(l) << endl;
 
     while(1) {
         int no = project.best();
         if (no == -1) break;
         sourceName = project.getName(no);
         isMainFile = project.isMain(no);
-        
         project.setCompiled(no);
         project.update(no);
-        string objectName = changeExtension(sourceName, ".obj");    
+        string objectName = changeExtension(sourceName, ".obj");  
 
         // Compile only if object file older than source or header
 
         if(OPTION_ALL || compareTime(sourceName, objectName)) {
-            string compiling = CPPCOMMAND + sourceName + " /Fo" + objectName;
+            string compiling = CPPCOMMAND + " " +sourceName + " /Fo" + objectName;
             if(OPTION_VERBOSE) {
                 puts(compiling.c_str());
             }               
@@ -412,7 +425,7 @@ int buildAll() {
         }        
         
         if(!COMPILE_ONLY) {
-            linking += " " + objectName;
+            LINKER += " " + objectName;
         }
         counter++;
         if(counter > l) {
@@ -421,11 +434,11 @@ int buildAll() {
     }
     
     if(!COMPILE_ONLY) {
-        linking += LIBS_TO_ADD;  
+        LINKER += " " + LIBS_TO_ADD;  
         if(OPTION_VERBOSE) {
-            puts(linking.c_str());
+            puts(LINKER.c_str());
         }      
-        system(linking.c_str());
+        system(LINKER.c_str());
     }
     return counter;
 }

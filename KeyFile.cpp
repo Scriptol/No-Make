@@ -22,6 +22,8 @@
 
 #include "KeyFile.hpp"
 
+string entryName;
+string entryValue;
 
 
 int EXISTS(const string &fname) {
@@ -40,15 +42,6 @@ string trim(const string &s) {
   return s.substr(d, l - d + 1);
 }
 
-
-bool processEntry(const string &s) {
-    if(s[0] == '#') return true;
-    int i = s.find('=');
-    if (i == -1) return false;
-    string k = trim(s.substr(0, i));
-    string v = trim(s.substr(i + 1));
-    return true;    
-}
 
 void codePad(char *str) {
   static char *mask = "HIRKOEPCLMELEJKXKAZIOQPSDMCEOMWXCVBHRIZKJSURJCNY";
@@ -109,7 +102,25 @@ void codeIt(char *src, char *tgt) {
   tgt[47] = '\0';
 }
 
-/* Loading and processing the .ini file */
+// Process a line
+
+char *reass() {
+  char *ptr = new char[entryValue.length() + 1];
+  strcpy(ptr, entryValue.c_str());
+  return ptr;
+}
+
+bool processEntry(const string &s)
+{
+  if(s[0] == '#') return true;
+  int i = s.find('=');
+  if (i == -1) return false;
+  entryName = trim(s.substr(0, i));
+  entryValue = trim(s.substr(i + 1));   
+  return setEntry();    
+}
+
+/* Loading and processing the nomake.ini file */
 
 bool ini(const string &relpath, const string &iname) {
   FILE *fp;
